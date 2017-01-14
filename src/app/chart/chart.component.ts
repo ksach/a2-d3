@@ -15,6 +15,8 @@ export class ChartComponent implements OnInit, OnChanges {
   @Output() onClick: EventEmitter<any> = new EventEmitter();
 
   container: any;
+  svg: any;
+  margin = {top: 20, right: 20, bottom: 30, left: 40};
   width: number;
   height: number;
   initialized: boolean = false;
@@ -39,25 +41,35 @@ export class ChartComponent implements OnInit, OnChanges {
   }
 
   initializeChart() {
-    const margin = {top: 20, right: 20, bottom: 30, left: 40};
-    const nativeElement = this.chartElement.nativeElement;
-    this.width = nativeElement.offsetWidth - margin.left - margin.right;
-    this.height = nativeElement.offsetHeight - margin.top - margin.bottom;
-    this.container = d3.select(nativeElement)
-      .append('svg')
-      .attr('width', this.width + margin.left + margin.right)
-      .attr('height', this.height + margin.top + margin.bottom)
-      .append('g')
-      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+    this.svg = d3.select(this.chartElement.nativeElement).append('svg');
+    this.container = this.svg.append('g');
 
-    this.x = d3.scaleBand().range([0, this.width]).padding(0.1);
-    this.y = d3.scaleLinear().range([this.height, 0]);
+    this.x = d3.scaleBand().padding(0.1);
+    this.y = d3.scaleLinear();
     
-    this.xAxis = this.container.append("g")
-      .attr("transform", "translate(0," + this.height + ")");
-
-    this.yAxis = this.container.append("g")
+    this.xAxis = this.container.append("g");
+    this.yAxis = this.container.append("g");
+    
+    this.resize();
   }
+
+  resize() {
+    this.width = this.chartElement.nativeElement.offsetWidth
+      - this.margin.left - this.margin.right;
+    this.height = this.chartElement.nativeElement.offsetHeight
+      - this.margin.top - this.margin.bottom;
+    
+    this.svg.attr('width', this.width + this.margin.left + this.margin.right)
+      .attr('height', this.height + this.margin.top + this.margin.bottom)
+    this.container.attr('transform', 
+      'translate(' + this.margin.left + ',' + this.margin.top + ')')
+   
+    this.x.range([0, this.width]);
+    this.y.range([this.height, 0]);
+    this.xAxis.attr("transform", "translate(0," + this.height + ")");
+   
+    this.renderChart();
+ }
 
   renderChart() {
     this.x.domain(this.chartData.map(datum => datum.salesperson));
@@ -73,6 +85,7 @@ export class ChartComponent implements OnInit, OnChanges {
     bars.enter().append('rect')
       .attr('class', 'bar')
       .style('fill', 'steelblue')
+      .style('cursor', 'pointer')
       .attr('x', d => this.x(d.salesperson))
       .attr('width', this.x.bandwidth())
       .attr('y', this.height)
