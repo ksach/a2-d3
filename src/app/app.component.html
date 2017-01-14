@@ -1,3 +1,8 @@
-<h1>
-  {{title}}
-</h1>
+<body>
+  <h1>
+    {{title}}
+  </h1>
+  <button [disabled]="!showAdd" (click)="addDataPoint()">Add Salesperson</button>
+  <button [disabled]="!showRemove" (click)="removeDataPoint()">Remove Salesperson</button>
+  <app-chart [chartData]="chartData" (onClick)="increaseSales($event)"></app-chart>
+</body>

@@ -1,31 +1,65 @@
-# A2D3
+# A2-D3
 
-This project was generated with [angular-cli](https://github.com/angular/angular-cli) version 1.0.0-beta.25.5.
+This is a demonstration of how to integrate [D3.js](https://d3js.org/) with [Angular 2](https://angular.io/)
 
-## Development server
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+## Running the app
+```bash
+npm install -g angular-cli
+npm install
+ng serve
+```
+(created with [angular-cli](https://github.com/angular/angular-cli))
 
-## Code scaffolding
+## Overview
+This app demonstrates an approach to integrating D3 with Angular. The goal was to make a purely ["presentational"](https://medium.com/@dan_abramov/smart-and-dumb-components-7ca2f9a7c7d0#.j8sz51nbm) D3 component, in that its state relies only on its inputs and any interaction is handled by its outputs. In addition it employs both D3's [general update pattern](https://bl.ocks.org/mbostock/3808218) as well as Angular's [onPush](https://angular.io/docs/ts/latest/api/core/index/ChangeDetectionStrategy-enum.html) change detection to take advantage of D3 transitions and use minimal change detection.
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive/pipe/service/class/module`.
+The component is a simple bar chart based on [this](https://bl.ocks.org/d3noob/bdf28027e0ce70bd132edc64f1dd7ea4) example, where the following interaction has been added:
+1. clicking a bar will increase its value
+2. clicking the 'Add Salesperson' button will add a data point
 
-## Build
+## Code Description 
+The chart component (/src/app/chart/chart.component.ts) takes a data set as input, and reacts to a change of this data set by implementing OnChanges.
+```javascript
+ngOnChanges() {
+  if (!this.initialized) {
+	return;
+  }
+  this.renderChart();
+}
+```
+In renderChart() D3's general update pattern is used to add new data points while leaving existing points as is
+```javascript
+const bars = this.container.selectAll('.bar')
+            .data(this.chartData, d => d.salesperson);
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `-prod` flag for a production build.
+bars.exit().remove();
 
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
-Before running the tests make sure you are serving the app via `ng serve`.
-
-## Deploying to GitHub Pages
-
-Run `ng github-pages:deploy` to deploy to GitHub Pages.
-
-## Further help
-
-To get more help on the `angular-cli` use `ng help` or go check out the [Angular-CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
+bars.enter().append('rect')
+.attr('class', 'bar')
+...
+```
+The click event in d3 emits an event via the component's outputs
+```javascript
+@Output() onClick: EventEmitter<any> = new EventEmitter();
+bars.enter().append('rect').on('click', this.onBarClick);
+onBarClick = d => {
+  this.onClick.emit(d.salesperson);
+}
+```
+In the app component template (/src/app/app.component.html) the chart component is included simply as:
+```html
+<app-chart [chartData]="chartData" (onClick)="increaseSales($event)"></app-chart>
+```
+and in the app component (/src/app/app.component.ts) the input chart data is updated (without mutation)
+```javascript
+increaseSales = salesperson => {
+  this.chartData = this.chartData.map(datum => {
+    const newDatum = datum;
+    if (datum.salesperson === salesperson) {
+      newDatum.sales += 5;
+    }
+    return newDatum;
+  });
+}
+```
+That's it. The component will update efficiently when the input changes.
